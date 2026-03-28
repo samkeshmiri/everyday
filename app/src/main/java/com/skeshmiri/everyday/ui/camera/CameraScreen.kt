@@ -42,8 +42,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -126,7 +127,10 @@ fun CameraScreenContent(
     onCapture: () -> Unit,
     preview: @Composable () -> Unit,
 ) {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val density = LocalDensity.current
+    val screenHeight = with(density) {
+        LocalWindowInfo.current.containerSize.height.toDp()
+    }
     val frameHeight = screenHeight * 0.5f
 
     Scaffold(

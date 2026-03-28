@@ -19,7 +19,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.skeshmiri.everyday.ui.common.FourThreePortraitFrame
@@ -33,7 +34,10 @@ fun ReviewScreen(
     onRetake: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val density = LocalDensity.current
+    val screenHeight = with(density) {
+        LocalWindowInfo.current.containerSize.height.toDp()
+    }
     val frameHeight = screenHeight * 0.5f
     BackHandler(onBack = { viewModel.discard(onRetake) })
 
