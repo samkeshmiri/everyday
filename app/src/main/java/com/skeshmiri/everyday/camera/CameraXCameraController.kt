@@ -1,6 +1,8 @@
 package com.skeshmiri.everyday.camera
 
 import android.content.Context
+import android.view.Surface
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -14,7 +16,6 @@ import com.skeshmiri.everyday.storage.TempPhotoStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import android.view.Surface
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -37,10 +38,14 @@ class CameraXCameraController(
             val provider = ProcessCameraProvider.getInstance(context).await(mainExecutor)
             cameraProvider = provider
 
-            val preview = Preview.Builder().build().apply {
+            val preview = Preview.Builder()
+                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                .build()
+                .apply {
                 surfaceProvider = previewView.surfaceProvider
             }
             imageCapture = ImageCapture.Builder()
+                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                 .setJpegQuality(95)
                 .setTargetRotation(previewView.display?.rotation ?: Surface.ROTATION_0)

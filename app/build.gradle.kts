@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.skeshmiri.everyday"
-    compileSdk = 36
+    compileSdkPreview = "CinnamonBun"
 
     defaultConfig {
         applicationId = "com.skeshmiri.everyday"

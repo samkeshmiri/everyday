@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -40,12 +41,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.skeshmiri.everyday.camera.CameraController
+import com.skeshmiri.everyday.ui.common.FourThreePortraitFrame
 import com.skeshmiri.everyday.ui.common.OnResume
 import com.skeshmiri.everyday.ui.common.ScreenHeader
 import com.skeshmiri.everyday.ui.common.UriImage
@@ -122,6 +125,9 @@ fun CameraScreenContent(
     onCapture: () -> Unit,
     preview: @Composable () -> Unit,
 ) {
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val frameHeight = screenHeight * 0.5f
+
     Scaffold(
         modifier = Modifier.systemBarsPadding(),
         topBar = {
@@ -187,63 +193,87 @@ fun CameraScreenContent(
                         .fillMaxSize()
                         .padding(innerPadding)
                         .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text(
-                        text = "Today's photo is already saved.",
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
-                        UriImage(
-                            uri = uiState.todayPhoto.uri,
-                            contentDescription = "Today's selfie",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
+                        Text(
+                            text = "Today's photo is already saved.",
+                            style = MaterialTheme.typography.headlineSmall,
                         )
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.TopCenter,
+                        ) {
+                            FourThreePortraitFrame(
+                                modifier = Modifier.height(frameHeight),
+                            ) {
+                                UriImage(
+                                    uri = uiState.todayPhoto.uri,
+                                    contentDescription = "Today's selfie",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                )
+                            }
+                        }
                     }
-                    Text(
-                        text = "Come back tomorrow for the next one.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Button(
-                        onClick = onOpenGallery,
-                        modifier = Modifier.fillMaxWidth(),
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
-                        Text("Open gallery")
+                        Text(
+                            text = "Come back tomorrow for the next one.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = onOpenGallery,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Open gallery")
+                        }
                     }
                 }
             }
 
             else -> {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
                         .background(Color.Black),
+                    verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    preview()
-
-                    if (uiState.errorMessage != null) {
-                        ElevatedCard(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(16.dp),
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 20.dp),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        FourThreePortraitFrame(
+                            modifier = Modifier.height(frameHeight),
                         ) {
-                            Text(
-                                text = uiState.errorMessage,
-                                modifier = Modifier.padding(16.dp),
-                            )
+                            preview()
+                        }
+
+                        if (uiState.errorMessage != null) {
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 12.dp),
+                            ) {
+                                Text(
+                                    text = uiState.errorMessage,
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            }
                         }
                     }
 
                     Row(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
                             .padding(bottom = 28.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
