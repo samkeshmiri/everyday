@@ -1,0 +1,25 @@
+app/src/main/java/com/skeshmiri/everyday/ui/review/ReviewScreen.kt
+  631ec8b0ee178b8f 22-23,37-40
+app/src/main/java/com/skeshmiri/everyday/ui/camera/CameraScreen.kt
+  631ec8b0ee178b8f 46-47,130-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "19fb422a3aa9590d9690fe2b3741bf331332e7cc",
+  "prompts": {
+    "631ec8b0ee178b8f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d315e-ffc3-79c2-b648-fd833abfd6b9",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Sam Keshmiri <samkeshmiri94@gmail.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 4,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    }
+  }
+}
