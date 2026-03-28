@@ -67,12 +67,6 @@ fun GalleryScreen(
                         text = uiState.errorMessage ?: "No saved photos yet.",
                         style = MaterialTheme.typography.headlineSmall,
                     )
-                    Text(
-                        text = "Take a selfie on the camera screen and it will appear here.",
-                        modifier = Modifier.padding(top = 12.dp),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
 
