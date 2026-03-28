@@ -1,0 +1,23 @@
+app/src/main/java/com/skeshmiri/everyday/ui/camera/CameraScreen.kt
+  631ec8b0ee178b8f 10,15-16,20-21,242,248-258,260-265,267-268,270,272-283,287,289-292,294-314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "5659684ff1e4ad523889a72de9015203676e92a2",
+  "prompts": {
+    "631ec8b0ee178b8f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d315e-ffc3-79c2-b648-fd833abfd6b9",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Sam Keshmiri <samkeshmiri94@gmail.com>",
+      "messages": [],
+      "total_additions": 74,
+      "total_deletions": 58,
+      "accepted_lines": 65,
+      "overriden_lines": 0
+    }
+  }
+}
