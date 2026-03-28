@@ -50,7 +50,14 @@ fun EverydayApp(
             CameraScreen(
                 viewModel = viewModel,
                 cameraController = cameraController,
-                onOpenGallery = { navController.navigate(Destinations.Gallery.route) },
+                onOpenGallery = {
+                    navController.navigate(Destinations.Gallery.route) {
+                        popUpTo(Destinations.Camera.route) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                },
                 onOpenReview = { dateKey, tempPath ->
                     navController.navigate(Destinations.Review.route(dateKey, tempPath))
                 },
@@ -96,7 +103,14 @@ fun EverydayApp(
             val viewModel: ReviewViewModel = viewModel(factory = reviewFactory)
             ReviewScreen(
                 viewModel = viewModel,
-                onSaved = { navController.popBackStack() },
+                onSaved = {
+                    navController.navigate(Destinations.Gallery.route) {
+                        popUpTo(Destinations.Camera.route) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                },
                 onRetake = { navController.popBackStack() },
             )
         }

@@ -21,16 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.Collections
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -52,8 +48,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.skeshmiri.everyday.camera.CameraController
 import com.skeshmiri.everyday.ui.common.FourThreePortraitFrame
 import com.skeshmiri.everyday.ui.common.OnResume
-import com.skeshmiri.everyday.ui.common.ScreenHeader
-import com.skeshmiri.everyday.ui.common.UriImage
 
 @Composable
 fun CameraScreen(
@@ -92,12 +86,17 @@ fun CameraScreen(
         }
     }
 
+    LaunchedEffect(uiState.todayPhoto) {
+        if (uiState.todayPhoto != null) {
+            onOpenGallery()
+        }
+    }
+
     CameraScreenContent(
         uiState = uiState,
         onRequestPermission = {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         },
-        onOpenGallery = onOpenGallery,
         onCapture = {
             viewModel.capture(cameraController) { dateKey, tempFile ->
                 onOpenReview(dateKey, tempFile.absolutePath)
@@ -123,7 +122,6 @@ fun CameraScreen(
 fun CameraScreenContent(
     uiState: CameraUiState,
     onRequestPermission: () -> Unit,
-    onOpenGallery: () -> Unit,
     onCapture: () -> Unit,
     preview: @Composable () -> Unit,
 ) {
@@ -133,19 +131,7 @@ fun CameraScreenContent(
     }
     val frameHeight = screenHeight * 0.5f
 
-    Scaffold(
-        modifier = Modifier.systemBarsPadding(),
-        topBar = {
-            ScreenHeader(
-                title = "Everyday",
-                actions = {
-                    IconButton(onClick = onOpenGallery) {
-                        Icon(Icons.Rounded.Collections, contentDescription = "Open gallery")
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
+    Scaffold(modifier = Modifier.systemBarsPadding()) { innerPadding ->
         when {
             uiState.isLoading -> {
                 Box(
@@ -183,62 +169,18 @@ fun CameraScreenContent(
                     ) {
                         Text("Allow camera")
                     }
-                    TextButton(
-                        onClick = onOpenGallery,
-                        modifier = Modifier.padding(top = 8.dp),
-                    ) {
-                        Text("Open gallery")
-                    }
                 }
             }
 
             uiState.todayPhoto != null -> {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
+                        .background(Color.Black),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
-                    ) {
-                        Text(
-                            text = "Today's photo is already saved.",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.TopCenter,
-                        ) {
-                            FourThreePortraitFrame(
-                                modifier = Modifier.height(frameHeight),
-                            ) {
-                                UriImage(
-                                    uri = uiState.todayPhoto.uri,
-                                    contentDescription = "Today's selfie",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                )
-                            }
-                        }
-                    }
-
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
-                    ) {
-                        Text(
-                            text = "Come back tomorrow for the next one.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Button(
-                            onClick = onOpenGallery,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Open gallery")
-                        }
-                    }
+                    CircularProgressIndicator()
                 }
             }
 
