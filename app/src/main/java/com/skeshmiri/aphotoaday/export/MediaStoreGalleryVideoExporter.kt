@@ -39,7 +39,11 @@ class MediaStoreGalleryVideoExporter(
     private val collectionUri = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
     private val relativePath = "${Environment.DIRECTORY_MOVIES}/Everyday/"
 
-    override suspend fun export(photos: List<DailyPhoto>, fps: Int): ExportedGalleryVideo = withContext(Dispatchers.IO) {
+    override suspend fun export(
+        photos: List<DailyPhoto>,
+        fps: Int,
+        onProgress: suspend (GalleryVideoExportProgress) -> Unit,
+    ): ExportedGalleryVideo = withContext(Dispatchers.IO) {
         require(photos.isNotEmpty()) { "At least one photo is required to export a video." }
         require(fps > 0) { "Frames per second must be greater than zero." }
 
@@ -62,6 +66,7 @@ class MediaStoreGalleryVideoExporter(
                     outputFd = descriptor.fileDescriptor,
                     photos = orderedPhotos,
                     fps = fps,
+                    onProgress = onProgress,
                 )
             } ?: throw IOException("Failed to open an output file for the exported video.")
 
@@ -88,10 +93,11 @@ class MediaStoreGalleryVideoExporter(
         }
     }
 
-    private fun encodeVideo(
+    private suspend fun encodeVideo(
         outputFd: FileDescriptor,
         photos: List<DailyPhoto>,
         fps: Int,
+        onProgress: suspend (GalleryVideoExportProgress) -> Unit,
     ) {
         val frameSize = determineFrameSize(photos)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -172,6 +178,12 @@ class MediaStoreGalleryVideoExporter(
                     muxer = muxer,
                     muxerState = muxerState,
                     endOfStream = false,
+                )
+                onProgress(
+                    GalleryVideoExportProgress(
+                        completedFrames = index + 1,
+                        totalFrames = photos.size,
+                    ),
                 )
 
                 if (sourceBitmap !== firstBitmap) {

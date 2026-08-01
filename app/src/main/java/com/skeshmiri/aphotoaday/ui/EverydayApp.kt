@@ -55,7 +55,7 @@ fun EverydayApp(
         SimpleViewModelFactory {
             GalleryViewModel(
                 repository = container.dailyPhotoRepository,
-                videoExporter = container.galleryVideoExporter,
+                videoExportCoordinator = container.galleryVideoExportCoordinator,
             )
         }
     }

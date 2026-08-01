@@ -37,6 +37,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -62,6 +63,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun GalleryScreen(
@@ -84,7 +86,6 @@ fun GalleryScreen(
         uiState = uiState,
         onOpenPhoto = onOpenPhoto,
         onOpenExportDialog = {
-            viewModel.clearExportFeedback()
             showExportDialog = true
         },
         onOpenGuideSettings = onOpenGuideSettings,
@@ -194,21 +195,48 @@ internal fun GalleryExportDialog(
     onDone: () -> Unit,
 ) {
     val exportedVideo = uiState.exportedVideo
+    val exportProgress = uiState.exportProgress
+    val progressPercent = exportProgress?.fraction?.times(100)?.roundToInt()
 
     AlertDialog(
-        onDismissRequest = {
-            if (!uiState.isExporting) {
-                onDismiss()
-            }
-        },
+        onDismissRequest = onDismiss,
         title = {
-            Text(if (exportedVideo == null) "Export video" else "Video saved")
+            Text(
+                when {
+                    uiState.isExporting -> "Exporting video"
+                    exportedVideo == null -> "Export video"
+                    else -> "Video saved"
+                },
+            )
         },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                if (exportedVideo == null) {
+                if (uiState.isExporting) {
+                    Text("${uiState.photos.size} photos are being exported from oldest to newest.")
+                    LinearProgressIndicator(
+                        progress = {
+                            exportProgress?.fraction ?: 0f
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = when {
+                            exportProgress == null -> "Preparing export..."
+                            else -> "${exportProgress.completedFrames} of ${exportProgress.totalFrames} photos exported" +
+                                progressPercent?.let { " ($it%)" }.orEmpty()
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    exportTimeRemainingLabel(uiState)?.let { remainingLabel ->
+                        Text(
+                            text = remainingLabel,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else if (exportedVideo == null) {
                     Text("${uiState.photos.size} photos will be exported from oldest to newest.")
                     Text(
                         text = "Estimated length: ${
@@ -248,20 +276,17 @@ internal fun GalleryExportDialog(
             }
         },
         confirmButton = {
-            if (exportedVideo == null) {
+            if (uiState.isExporting) {
+                TextButton(
+                    onClick = onDismiss,
+                ) {
+                    Text("Close")
+                }
+            } else if (exportedVideo == null) {
                 Button(
                     onClick = onExport,
-                    enabled = !uiState.isExporting,
                 ) {
-                    if (uiState.isExporting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text("Export MP4")
-                    }
+                    Text("Export MP4")
                 }
             } else {
                 Button(onClick = onDone) {
@@ -270,14 +295,13 @@ internal fun GalleryExportDialog(
             }
         },
         dismissButton = {
-            if (exportedVideo == null) {
+            if (!uiState.isExporting && exportedVideo == null) {
                 TextButton(
                     onClick = onDismiss,
-                    enabled = !uiState.isExporting,
                 ) {
                     Text("Cancel")
                 }
-            } else {
+            } else if (exportedVideo != null) {
                 TextButton(
                     onClick = { onOpenExportedVideo(exportedVideo) },
                 ) {
@@ -295,6 +319,29 @@ private fun openExportedVideo(context: Context, exportedVideo: ExportedGalleryVi
         clipData = ClipData.newUri(context.contentResolver, exportedVideo.displayName, exportedVideo.uri)
     }
     context.startActivity(viewIntent)
+}
+
+private fun exportTimeRemainingLabel(uiState: GalleryUiState): String? {
+    val progress = uiState.exportProgress ?: return null
+    val startedAtEpochMillis = uiState.exportStartedAtEpochMillis ?: return null
+    if (progress.completedFrames <= 0 || progress.totalFrames <= 0) {
+        return null
+    }
+
+    val fraction = progress.fraction
+    if (fraction <= 0f || fraction >= 1f) {
+        return null
+    }
+
+    val elapsedMillis = (System.currentTimeMillis() - startedAtEpochMillis).coerceAtLeast(0L)
+    if (elapsedMillis <= 0L) {
+        return null
+    }
+
+    val estimatedTotalMillis = (elapsedMillis / fraction).toLong()
+    val remainingMillis = (estimatedTotalMillis - elapsedMillis).coerceAtLeast(0L)
+    val remainingSeconds = remainingMillis / 1000.0
+    return "About ${GalleryVideoExportDefaults.formatDurationSeconds(remainingSeconds)}s left"
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.skeshmiri.aphotoaday.export.GalleryVideoExportProgress
 import com.skeshmiri.aphotoaday.model.DailyPhoto
 import com.skeshmiri.aphotoaday.ui.theme.EverydayTheme
 import org.junit.Rule
@@ -102,6 +103,7 @@ class GalleryScreenContentTest {
                     onDismiss = {},
                     onSelectFps = { selectedFps = it },
                     onExport = {},
+                    onOpenExportedVideo = {},
                     onDone = {},
                 )
             }
@@ -110,6 +112,34 @@ class GalleryScreenContentTest {
         composeRule.onNodeWithText("Estimated length: 7.2 seconds").assertIsDisplayed()
         composeRule.onNodeWithText("3 fps").performClick()
         composeRule.onNodeWithText("Estimated length: 12.0 seconds").assertIsDisplayed()
+    }
+
+    @Test
+    fun exportDialogShowsPhotoProgressWhileExportRuns() {
+        composeRule.setContent {
+            EverydayTheme {
+                GalleryExportDialog(
+                    uiState = GalleryUiState(
+                        isLoading = false,
+                        photos = List(12) { index -> photo(id = index.toLong()) },
+                        isExporting = true,
+                        exportProgress = GalleryVideoExportProgress(
+                            completedFrames = 3,
+                            totalFrames = 12,
+                        ),
+                        exportStartedAtEpochMillis = System.currentTimeMillis() - 3_000L,
+                    ),
+                    onDismiss = {},
+                    onSelectFps = {},
+                    onExport = {},
+                    onOpenExportedVideo = {},
+                    onDone = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Exporting video").assertIsDisplayed()
+        composeRule.onNodeWithText("3 of 12 photos exported (25%)").assertIsDisplayed()
     }
 
     private fun photo(

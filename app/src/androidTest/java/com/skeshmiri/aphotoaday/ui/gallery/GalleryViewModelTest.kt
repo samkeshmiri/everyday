@@ -4,10 +4,13 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.skeshmiri.aphotoaday.data.DailyPhotoRepository
 import com.skeshmiri.aphotoaday.export.ExportedGalleryVideo
-import com.skeshmiri.aphotoaday.export.GalleryVideoExporter
+import com.skeshmiri.aphotoaday.export.GalleryVideoExportCoordinator
+import com.skeshmiri.aphotoaday.export.GalleryVideoExportState
 import com.skeshmiri.aphotoaday.model.DailyPhoto
 import com.skeshmiri.aphotoaday.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -37,7 +40,7 @@ class GalleryViewModelTest {
         )
         val viewModel = GalleryViewModel(
             repository = repository,
-            videoExporter = FakeGalleryVideoExporter(),
+            videoExportCoordinator = FakeGalleryVideoExportCoordinator(),
         )
 
         viewModel.refresh()
@@ -58,7 +61,7 @@ class GalleryViewModelTest {
                     )
                 },
             ),
-            videoExporter = FakeGalleryVideoExporter(),
+            videoExportCoordinator = FakeGalleryVideoExportCoordinator(),
         )
 
         viewModel.refresh()
@@ -70,8 +73,8 @@ class GalleryViewModelTest {
     }
 
     @Test
-    fun exportVideoSortsPhotosOldestToNewestAndStoresTheExportResult() = runTest {
-        val exporter = FakeGalleryVideoExporter()
+    fun exportVideoStartsTheBackgroundExportAndStoresTheExportResult() = runTest {
+        val exportCoordinator = FakeGalleryVideoExportCoordinator()
         val viewModel = GalleryViewModel(
             repository = FakeDailyPhotoRepository(
                 photos = listOf(
@@ -80,35 +83,45 @@ class GalleryViewModelTest {
                     photo(id = 1L, capturedAt = "2026-03-27T10:00:00Z"),
                 ),
             ),
-            videoExporter = exporter,
+            videoExportCoordinator = exportCoordinator,
         )
 
         viewModel.refresh()
         advanceUntilIdle()
         viewModel.selectFps(8)
         viewModel.exportVideo()
+        exportCoordinator.emit(
+            GalleryVideoExportState.Succeeded(
+                workId = "export-1",
+                exportedVideo = exportedVideo(fps = 8, frameCount = 3),
+            ),
+        )
         advanceUntilIdle()
 
-        assertEquals(listOf(1L, 2L, 3L), exporter.lastExportedPhotoIds)
-        assertEquals(8, exporter.lastExportedFps)
+        assertEquals(8, exportCoordinator.lastStartedFps)
         assertNotNull(viewModel.uiState.value.exportedVideo)
         assertNull(viewModel.uiState.value.exportErrorMessage)
     }
 
     @Test
     fun exportVideoSurfacesExporterFailures() = runTest {
+        val exportCoordinator = FakeGalleryVideoExportCoordinator()
         val viewModel = GalleryViewModel(
             repository = FakeDailyPhotoRepository(
                 photos = listOf(photo(id = 1L, capturedAt = "2026-03-27T10:00:00Z")),
             ),
-            videoExporter = FakeGalleryVideoExporter(
-                failureMessage = "Encoder failed.",
-            ),
+            videoExportCoordinator = exportCoordinator,
         )
 
         viewModel.refresh()
         advanceUntilIdle()
         viewModel.exportVideo()
+        exportCoordinator.emit(
+            GalleryVideoExportState.Failed(
+                workId = "export-2",
+                message = "Encoder failed.",
+            ),
+        )
         advanceUntilIdle()
 
         assertEquals("Encoder failed.", viewModel.uiState.value.exportErrorMessage)
@@ -127,27 +140,18 @@ class GalleryViewModelTest {
         }
     }
 
-    private class FakeGalleryVideoExporter(
-        private val failureMessage: String? = null,
-    ) : GalleryVideoExporter {
-        var lastExportedPhotoIds: List<Long> = emptyList()
-        var lastExportedFps: Int? = null
+    private class FakeGalleryVideoExportCoordinator : GalleryVideoExportCoordinator {
+        private val mutableState = MutableStateFlow<GalleryVideoExportState>(GalleryVideoExportState.Idle)
 
-        override suspend fun export(photos: List<DailyPhoto>, fps: Int): ExportedGalleryVideo {
-            failureMessage?.let { message ->
-                throw IllegalStateException(message)
-            }
+        override val state = mutableState.asStateFlow()
+        var lastStartedFps: Int? = null
 
-            lastExportedPhotoIds = photos.map { it.id }
-            lastExportedFps = fps
-            return ExportedGalleryVideo(
-                uri = Uri.parse("content://everyday/video/exported"),
-                displayName = "Everyday_2026-03-27_to_2026-03-29_${fps}fps.mp4",
-                relativePath = "Movies/Everyday/",
-                fps = fps,
-                frameCount = photos.size,
-                durationSeconds = GalleryVideoExportDefaults.estimatedDurationSeconds(photos.size, fps),
-            )
+        override fun startExport(fps: Int) {
+            lastStartedFps = fps
+        }
+
+        fun emit(state: GalleryVideoExportState) {
+            mutableState.value = state
         }
     }
 
@@ -162,5 +166,17 @@ class GalleryViewModelTest {
         capturedAt = Instant.parse(capturedAt),
         width = 1200,
         height = 1600,
+    )
+
+    private fun exportedVideo(
+        fps: Int,
+        frameCount: Int,
+    ) = ExportedGalleryVideo(
+        uri = Uri.parse("content://everyday/video/exported"),
+        displayName = "Everyday_2026-03-27_to_2026-03-29_${fps}fps.mp4",
+        relativePath = "Movies/Everyday/",
+        fps = fps,
+        frameCount = frameCount,
+        durationSeconds = GalleryVideoExportDefaults.estimatedDurationSeconds(frameCount, fps),
     )
 }

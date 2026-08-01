@@ -4,4 +4,12 @@
     <string name="notification_channel_description">Reminds you to take today\'s photo.</string>
     <string name="notification_title">Time for today\'s photo</string>
     <string name="notification_body">Open A Photo a Day and take your image.</string>
+    <string name="export_notification_channel_name">Video export</string>
+    <string name="export_notification_channel_description">Shows progress while your gallery video is exporting.</string>
+    <string name="export_notification_in_progress_title">Exporting gallery video</string>
+    <string name="export_notification_starting_body">Preparing your video export.</string>
+    <string name="export_notification_progress_body">%1$d of %2$d photos exported</string>
+    <string name="export_notification_completed_title">Gallery video saved</string>
+    <string name="export_notification_completed_body">%1$d photos were exported to your gallery.</string>
+    <string name="export_notification_failed_title">Video export failed</string>
 </resources>

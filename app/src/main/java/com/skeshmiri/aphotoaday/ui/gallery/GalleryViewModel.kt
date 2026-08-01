@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skeshmiri.aphotoaday.data.DailyPhotoRepository
 import com.skeshmiri.aphotoaday.export.ExportedGalleryVideo
-import com.skeshmiri.aphotoaday.export.GalleryVideoExporter
+import com.skeshmiri.aphotoaday.export.GalleryVideoExportCoordinator
+import com.skeshmiri.aphotoaday.export.GalleryVideoExportProgress
+import com.skeshmiri.aphotoaday.export.GalleryVideoExportState
 import com.skeshmiri.aphotoaday.model.DailyPhoto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,16 +21,30 @@ data class GalleryUiState(
     val selectedFps: Int = GalleryVideoExportDefaults.defaultFps,
     val estimatedDurationSeconds: Double = 0.0,
     val isExporting: Boolean = false,
+    val exportProgress: GalleryVideoExportProgress? = null,
+    val exportStartedAtEpochMillis: Long? = null,
     val exportErrorMessage: String? = null,
     val exportedVideo: ExportedGalleryVideo? = null,
+    val terminalExportWorkId: String? = null,
 )
 
 class GalleryViewModel(
     private val repository: DailyPhotoRepository,
-    private val videoExporter: GalleryVideoExporter,
+    private val videoExportCoordinator: GalleryVideoExportCoordinator,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(GalleryUiState())
     val uiState: StateFlow<GalleryUiState> = _uiState.asStateFlow()
+    private var dismissedTerminalWorkId: String? = null
+
+    init {
+        viewModelScope.launch {
+            videoExportCoordinator.state.collect { exportState ->
+                _uiState.update { currentState ->
+                    currentState.withExportState(exportState, dismissedTerminalWorkId)
+                }
+            }
+        }
+    }
 
     fun refresh() {
         viewModelScope.launch {
@@ -68,10 +84,12 @@ class GalleryViewModel(
     }
 
     fun clearExportFeedback() {
+        dismissedTerminalWorkId = _uiState.value.terminalExportWorkId
         _uiState.update {
             it.copy(
                 exportErrorMessage = null,
                 exportedVideo = null,
+                terminalExportWorkId = null,
             )
         }
     }
@@ -82,44 +100,25 @@ class GalleryViewModel(
             return
         }
 
-        val orderedPhotos = GalleryVideoExportDefaults.sortPhotosForExport(snapshot.photos)
-        if (orderedPhotos.isEmpty()) {
+        if (snapshot.photos.isEmpty()) {
             _uiState.update {
                 it.copy(exportErrorMessage = "Add at least one photo to export a video.")
             }
             return
         }
 
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isExporting = true,
-                    exportErrorMessage = null,
-                    exportedVideo = null,
-                )
-            }
-
-            runCatching {
-                videoExporter.export(
-                    photos = orderedPhotos,
-                    fps = snapshot.selectedFps,
-                )
-            }.onSuccess { exportedVideo ->
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        exportedVideo = exportedVideo,
-                    )
-                }
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        exportErrorMessage = error.message ?: "Failed to export the video.",
-                    )
-                }
-            }
+        dismissedTerminalWorkId = null
+        _uiState.update {
+            it.copy(
+                isExporting = true,
+                exportProgress = null,
+                exportStartedAtEpochMillis = System.currentTimeMillis(),
+                exportErrorMessage = null,
+                exportedVideo = null,
+                terminalExportWorkId = null,
+            )
         }
+        videoExportCoordinator.startExport(snapshot.selectedFps)
     }
 }
 
@@ -130,3 +129,59 @@ private fun GalleryUiState.withEstimatedDuration(): GalleryUiState =
             fps = selectedFps,
         ),
     )
+
+private fun GalleryUiState.withExportState(
+    exportState: GalleryVideoExportState,
+    dismissedTerminalWorkId: String?,
+): GalleryUiState = when (exportState) {
+    GalleryVideoExportState.Idle -> copy(
+        isExporting = false,
+        exportProgress = null,
+        exportStartedAtEpochMillis = null,
+    )
+
+    is GalleryVideoExportState.Running -> copy(
+        isExporting = true,
+        exportProgress = exportState.progress,
+        exportStartedAtEpochMillis = exportState.startedAtEpochMillis,
+        exportErrorMessage = null,
+        exportedVideo = null,
+        terminalExportWorkId = null,
+    )
+
+    is GalleryVideoExportState.Succeeded ->
+        if (dismissedTerminalWorkId == exportState.workId) {
+            copy(
+                isExporting = false,
+                exportProgress = null,
+                exportStartedAtEpochMillis = null,
+            )
+        } else {
+            copy(
+                isExporting = false,
+                exportProgress = null,
+                exportStartedAtEpochMillis = null,
+                exportErrorMessage = null,
+                exportedVideo = exportState.exportedVideo,
+                terminalExportWorkId = exportState.workId,
+            )
+        }
+
+    is GalleryVideoExportState.Failed ->
+        if (dismissedTerminalWorkId == exportState.workId) {
+            copy(
+                isExporting = false,
+                exportProgress = null,
+                exportStartedAtEpochMillis = null,
+            )
+        } else {
+            copy(
+                isExporting = false,
+                exportProgress = null,
+                exportStartedAtEpochMillis = null,
+                exportErrorMessage = exportState.message,
+                exportedVideo = null,
+                terminalExportWorkId = exportState.workId,
+            )
+        }
+}
