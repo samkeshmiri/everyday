@@ -112,6 +112,7 @@ internal fun GalleryScreenContent(
     onOpenExportDialog: () -> Unit,
     onOpenGuideSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    today: LocalDate = LocalDate.now(),
 ) {
     Scaffold(
         modifier = modifier,
@@ -175,6 +176,7 @@ internal fun GalleryScreenContent(
                 GalleryGrid(
                     photos = uiState.photos,
                     onOpenPhoto = onOpenPhoto,
+                    today = today,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
@@ -349,10 +351,11 @@ private fun exportTimeRemainingLabel(uiState: GalleryUiState): String? {
 private fun GalleryGrid(
     photos: List<DailyPhoto>,
     onOpenPhoto: (DailyPhoto) -> Unit,
+    today: LocalDate,
     modifier: Modifier = Modifier,
 ) {
     val gridState = rememberLazyGridState()
-    val monthSections = remember(photos) { photos.toMonthSections() }
+    val monthSections = remember(photos, today) { photos.toMonthSections(today) }
 
     Box(modifier = modifier) {
         LazyVerticalGrid(
@@ -393,21 +396,42 @@ private fun GalleryGrid(
                     }
                 }
 
-                items(section.photos, key = { it.id }) { photo ->
-                    Column(
-                        modifier = Modifier
-                            .animateItem()
-                            .clickable { onOpenPhoto(photo) },
-                    ) {
-                        UriImage(
-                            uri = photo.uri,
-                            contentDescription = photo.displayName,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f),
-                            contentScale = ContentScale.Crop,
-                            thumbnailSize = 256.dp,
-                        )
+                items(section.items, key = { it.key }) { item ->
+                    when (item) {
+                        is GalleryDayItem.Photo -> {
+                            Column(
+                                modifier = Modifier
+                                    .animateItem()
+                                    .clickable { onOpenPhoto(item.photo) },
+                            ) {
+                                UriImage(
+                                    uri = item.photo.uri,
+                                    contentDescription = item.photo.displayName,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f),
+                                    contentScale = ContentScale.Crop,
+                                    thumbnailSize = 256.dp,
+                                )
+                            }
+                        }
+
+                        is GalleryDayItem.Missing -> {
+                            Box(
+                                modifier = Modifier
+                                    .animateItem()
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = item.date.dayOfMonth.toString(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -468,27 +492,88 @@ private fun GalleryScrollbar(
     }
 }
 
-private data class GalleryMonthSection(
+internal data class GalleryMonthSection(
     val yearMonth: YearMonth,
     val title: String,
     val progress: String,
-    val photos: List<DailyPhoto>,
+    val items: List<GalleryDayItem>,
 )
 
-private fun List<DailyPhoto>.toMonthSections(): List<GalleryMonthSection> {
+internal sealed interface GalleryDayItem {
+    val date: LocalDate
+    val key: String
+
+    data class Photo(
+        val photo: DailyPhoto,
+        override val date: LocalDate,
+    ) : GalleryDayItem {
+        override val key: String = "photo-${photo.id}"
+    }
+
+    data class Missing(
+        override val date: LocalDate,
+    ) : GalleryDayItem {
+        override val key: String = "missing-$date"
+    }
+}
+
+internal fun List<DailyPhoto>.toMonthSections(today: LocalDate): List<GalleryMonthSection> {
+    if (isEmpty()) return emptyList()
+
     val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
-    return groupBy { photo ->
-        runCatching {
-            YearMonth.from(LocalDate.parse(photo.dateKey))
-        }.getOrElse {
-            YearMonth.from(photo.capturedAt.atZone(ZoneId.systemDefault()))
+    val datedPhotos = map { photo ->
+        GalleryDayItem.Photo(
+            photo = photo,
+            date = photo.galleryDate(),
+        )
+    }
+    val firstDate = datedPhotos.minOf { it.date }
+
+    if (firstDate.isAfter(today)) {
+        return datedPhotos
+            .groupBy { YearMonth.from(it.date) }
+            .toSortedMap(reverseOrder())
+            .map { (yearMonth, photos) ->
+                GalleryMonthSection(
+                    yearMonth = yearMonth,
+                    title = monthFormatter.format(yearMonth.atDay(1)),
+                    progress = "(${photos.size}/${yearMonth.lengthOfMonth()})",
+                    items = photos.sortedByDescending { it.date },
+                )
+            }
+    }
+
+    val photosByDate = datedPhotos.groupBy { it.date }
+    val firstMonth = YearMonth.from(firstDate)
+    val currentMonth = YearMonth.from(today)
+    val months = buildList {
+        var month = currentMonth
+        while (!month.isBefore(firstMonth)) {
+            add(month)
+            month = month.minusMonths(1)
         }
-    }.map { (yearMonth, monthPhotos) ->
+    }
+
+    return months.map { yearMonth ->
+        val firstDay = if (yearMonth == firstMonth) firstDate.dayOfMonth else 1
+        val lastDay = if (yearMonth == currentMonth) today.dayOfMonth else yearMonth.lengthOfMonth()
+        val items = (lastDay downTo firstDay).flatMap { dayOfMonth ->
+            val date = yearMonth.atDay(dayOfMonth)
+            photosByDate[date] ?: listOf(GalleryDayItem.Missing(date))
+        }
+        val photoCount = items.count { it is GalleryDayItem.Photo }
+
         GalleryMonthSection(
             yearMonth = yearMonth,
             title = monthFormatter.format(yearMonth.atDay(1)),
-            progress = "(${monthPhotos.size}/${yearMonth.lengthOfMonth()})",
-            photos = monthPhotos,
+            progress = "($photoCount/${yearMonth.lengthOfMonth()})",
+            items = items,
         )
     }
+}
+
+private fun DailyPhoto.galleryDate(): LocalDate = runCatching {
+    LocalDate.parse(dateKey)
+}.getOrElse {
+    capturedAt.atZone(ZoneId.systemDefault()).toLocalDate()
 }
