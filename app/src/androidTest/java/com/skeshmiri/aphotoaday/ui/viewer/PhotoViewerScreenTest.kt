@@ -33,6 +33,7 @@ class PhotoViewerScreenTest {
                     contentDescription = "2026-05-03_084500.jpg",
                     capturedAt = null,
                     onClose = { closed = true },
+                    onOpenInGallery = {},
                     onShare = {},
                 )
             }
@@ -57,6 +58,7 @@ class PhotoViewerScreenTest {
                     contentDescription = "2026-05-03_084500.jpg",
                     capturedAt = null,
                     onClose = {},
+                    onOpenInGallery = {},
                     onShare = { shared = true },
                 )
             }
@@ -66,6 +68,31 @@ class PhotoViewerScreenTest {
 
         composeRule.runOnIdle {
             assertTrue(shared)
+        }
+    }
+
+    @Test
+    fun tappingOpenInGalleryButtonCallsOnOpenInGallery() {
+        var opened by mutableStateOf(false)
+
+        composeRule.setContent {
+            EverydayTheme {
+                PhotoViewerScreen(
+                    uri = Uri.parse("content://everyday/photo/1"),
+                    title = "2026-05-03",
+                    contentDescription = "2026-05-03_084500.jpg",
+                    capturedAt = null,
+                    onClose = {},
+                    onOpenInGallery = { opened = true },
+                    onShare = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Open in gallery").performClick()
+
+        composeRule.runOnIdle {
+            assertTrue(opened)
         }
     }
 
@@ -83,6 +110,7 @@ class PhotoViewerScreenTest {
                     ),
                     initialPhotoId = 1L,
                     onClose = {},
+                    onOpenInGallery = {},
                     onShare = { sharedPhotoId = it.id },
                 )
             }

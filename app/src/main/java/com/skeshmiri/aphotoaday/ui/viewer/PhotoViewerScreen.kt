@@ -7,12 +7,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -31,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.skeshmiri.aphotoaday.ui.common.ScreenHeader
 import com.skeshmiri.aphotoaday.ui.common.UriImage
 import java.time.Instant
@@ -56,6 +60,7 @@ fun PhotoViewerScreen(
     contentDescription: String,
     capturedAt: Instant?,
     onClose: () -> Unit,
+    onOpenInGallery: () -> Unit,
     onShare: () -> Unit,
 ) {
     PhotoViewerScreen(
@@ -70,6 +75,7 @@ fun PhotoViewerScreen(
         ),
         initialPhotoId = uri.toString().hashCode().toLong(),
         onClose = onClose,
+        onOpenInGallery = { onOpenInGallery() },
         onShare = { onShare() },
     )
 }
@@ -80,6 +86,7 @@ fun PhotoViewerScreen(
     photos: List<PhotoViewerItem>,
     initialPhotoId: Long,
     onClose: () -> Unit,
+    onOpenInGallery: (PhotoViewerItem) -> Unit,
     onShare: (PhotoViewerItem) -> Unit,
 ) {
     val context = LocalContext.current
@@ -145,14 +152,28 @@ fun PhotoViewerScreen(
         },
         floatingActionButton = {
             currentPhoto?.let { photo ->
-                FloatingActionButton(
-                    onClick = { onShare(photo) },
-                    shape = CircleShape,
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.End,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Share,
-                        contentDescription = "Share photo",
-                    )
+                    FloatingActionButton(
+                        onClick = { onOpenInGallery(photo) },
+                        shape = CircleShape,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PhotoLibrary,
+                            contentDescription = "Open in gallery",
+                        )
+                    }
+                    FloatingActionButton(
+                        onClick = { onShare(photo) },
+                        shape = CircleShape,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Share,
+                            contentDescription = "Share photo",
+                        )
+                    }
                 }
             }
         },

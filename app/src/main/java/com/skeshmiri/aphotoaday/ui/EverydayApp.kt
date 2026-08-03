@@ -175,6 +175,7 @@ fun EverydayApp(
                 photos = viewerPhotos,
                 initialPhotoId = photoId,
                 onClose = { navController.popBackStack() },
+                onOpenInGallery = { photo -> openPhotoInGallery(context, photo) },
                 onShare = { photo -> sharePhoto(context, photo) },
             )
         }
@@ -202,6 +203,15 @@ private fun sharePhoto(context: Context, photo: PhotoViewerItem) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(chooserIntent)
+}
+
+private fun openPhotoInGallery(context: Context, photo: PhotoViewerItem) {
+    val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(photo.uri, context.contentResolver.getType(photo.uri) ?: "image/*")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        clipData = ClipData.newUri(context.contentResolver, photo.contentDescription, photo.uri)
+    }
+    context.startActivity(viewIntent)
 }
 
 private sealed class Destinations(val route: String) {
