@@ -1,0 +1,24 @@
+app/src/androidTest/java/com/skeshmiri/aphotoaday/ui/viewer/PhotoViewerScreenTest.kt
+  s_3439561e43090a::t_5038252bce519f 36,61,74-98,113
+app/src/main/java/com/skeshmiri/aphotoaday/ui/EverydayApp.kt
+  s_3439561e43090a::t_5038252bce519f 178,208-214
+  s_3439561e43090a::t_6d77ff6cae3f06 215-216
+app/src/main/java/com/skeshmiri/aphotoaday/ui/viewer/PhotoViewerScreen.kt
+  s_3439561e43090a::t_5038252bce519f 10-11,18,37,63,78,89,155-157,159-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4b13548aa3da6f942e9a9056a118ddf691fccaa2",
+  "prompts": {},
+  "sessions": {
+    "s_3439561e43090a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc700-5396-7ba3-9ecd-2088fb12aafa",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Sam Keshmiri <samkeshmiri94@gmail.com>"
+    }
+  }
+}
