@@ -117,7 +117,7 @@ class GalleryScreenContentTest {
     }
 
     @Test
-    fun buildsMissingDaysFromFirstPhotoThroughTodayIncludingEmptyMonths() {
+    fun omitsEmptyMonthsWhileBuildingMissingDays() {
         val sections = listOf(
             photo(id = 1L, capturedAt = "2026-01-30T08:45:00Z"),
             photo(id = 2L, capturedAt = "2026-03-02T08:45:00Z"),
@@ -126,17 +126,12 @@ class GalleryScreenContentTest {
         assertEquals(
             listOf(
                 YearMonth.of(2026, 3),
-                YearMonth.of(2026, 2),
                 YearMonth.of(2026, 1),
             ),
             sections.map { it.yearMonth },
         )
 
-        val februaryItems = sections.single { it.yearMonth == YearMonth.of(2026, 2) }.items
-        assertEquals(28, februaryItems.size)
-        assertTrue(februaryItems.all { it is GalleryDayItem.Missing })
-        assertEquals(LocalDate.of(2026, 2, 28), februaryItems.first().date)
-        assertEquals(LocalDate.of(2026, 2, 1), februaryItems.last().date)
+        assertTrue(sections.none { it.yearMonth == YearMonth.of(2026, 2) })
 
         val januaryItems = sections.single { it.yearMonth == YearMonth.of(2026, 1) }.items
         assertEquals(LocalDate.of(2026, 1, 30), januaryItems.last().date)

@@ -554,7 +554,7 @@ internal fun List<DailyPhoto>.toMonthSections(today: LocalDate): List<GalleryMon
         }
     }
 
-    return months.map { yearMonth ->
+    return months.mapNotNull { yearMonth ->
         val firstDay = if (yearMonth == firstMonth) firstDate.dayOfMonth else 1
         val lastDay = if (yearMonth == currentMonth) today.dayOfMonth else yearMonth.lengthOfMonth()
         val items = (lastDay downTo firstDay).flatMap { dayOfMonth ->
@@ -562,6 +562,10 @@ internal fun List<DailyPhoto>.toMonthSections(today: LocalDate): List<GalleryMon
             photosByDate[date] ?: listOf(GalleryDayItem.Missing(date))
         }
         val photoCount = items.count { it is GalleryDayItem.Photo }
+
+        if (photoCount == 0) {
+            return@mapNotNull null
+        }
 
         GalleryMonthSection(
             yearMonth = yearMonth,
